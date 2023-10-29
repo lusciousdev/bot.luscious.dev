@@ -1,0 +1,94 @@
+{
+  "injuries": {
+    "reason": [
+      "died of blunt force trauma to [[pos]] [[m]]",
+      "died of an infection in [[pos]] [[m]]",
+      "died due to a botched amputation of [[pos]] [[m]]"
+    ],
+    "modifier": [
+      "head",
+      "left arm",
+      "right arm",
+      "big toe",
+      "pinky toe",
+      "left leg",
+      "right leg",
+      "ear",
+      "finger",
+      "thumb",
+      "left foot",
+      "right foot"
+    ]
+  },
+  "animal_incidents": {
+    "reason": [
+      "has been mauled by [[m]]",
+      "has been eaten by [[m]]",
+      "lost a fight with [[m]]"
+    ],
+    "modifier": [
+      "a grizzly bear",
+      "a polar bear",
+      "a tiger",
+      "a lion",
+      "a house cat",
+      "a giraffe",
+      "a crocodile",
+      "an alligator",
+      "a chihuahua",
+      "a shark",
+      "a parrot",
+      "two dozen frogs"
+    ]
+  },
+  "activities": {
+    "reason": [
+      "died in a tragic [[m]] accident"
+    ],
+    "modifier": [
+      "bobsledding",
+      "cliff diving",
+      "amateur bomb defusal",
+      "competitive eating",
+      "gaming",
+      "jetskiing",
+      "hang gliding",
+      "bungee jumping",
+      ""
+    ]
+  },
+  "standalone": {
+    "reason": [
+      "died of boredom",
+      "has been eaten by zombies",
+      "died of a weed overdose",
+      "died in a house fire after sleeping with a lit cigarette in hand",
+      "died while trying to swim in lava",
+      "has withered away",
+      "spontaneously combusted",
+      "died of old age",
+      "died of the Black Plague",
+      "went crazy. Crazy? I was crazy once. They locked me in a room. A rubber room. A rubber room with rats. And rats make me crazy",
+      "died while reaching for the service weapon of an officer of the law",
+      "was hit by a falling coconut",
+      "has died. Pancaked by drunk dump truck driver",
+      "was struck by lightning",
+      "experienced kinetic energy",
+      "was squashed by a falling anvil",
+      "has died of dysentery",
+      "was made to walk the plank",
+      "bit the dust",
+      "is now six feet under",
+      "bought the farm",
+      "has left this mortal coil",
+      "croaked",
+      "is pushing up daisies",
+      "kicked the bucket",
+      "is sleeping with the fishes",
+      "met an untimely end",
+      "has died of ligma",
+      "ded"
+    ],
+    "modifier": []
+  }
+}
