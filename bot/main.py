@@ -175,7 +175,7 @@ class LusciousBot(discord.Client):
           await msg.add_reaction("🇵")
           await msg.add_reaction("🕊️")
         
-      await asyncio.sleep(5) # random.randint(self.death_wait_min, self.death_wait_max))
+      await asyncio.sleep(random.randint(self.death_wait_min, self.death_wait_max))
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
