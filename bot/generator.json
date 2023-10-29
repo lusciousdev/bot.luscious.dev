@@ -39,7 +39,8 @@
       "a shark",
       "a parrot",
       "two dozen frogs",
-      "a particularly viscious rabbit"
+      "a particularly viscious rabbit",
+      "a kangaroo"
     ]
   },
   "activities": {
@@ -55,7 +56,8 @@
       "jetskiing",
       "hang gliding",
       "bungee jumping",
-      ""
+      "ziplining",
+      "storm chasing"
     ]
   },
   "standalone": {
@@ -88,7 +90,8 @@
       "is sleeping with the fishes",
       "met an untimely end",
       "has died of ligma",
-      "ded"
+      "ded",
+      "died under mysterious circumstances"
     ],
     "modifier": []
   }

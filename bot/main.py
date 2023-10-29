@@ -17,7 +17,7 @@ img_ext_regex = re.compile(r"\.(png|jpeg|jpg|bmp)")
 if sys.platform == "win32":
   font_options = ["Comic-Sans-MS-Bold", "Impact", "Times-New-Roman-Bold", "Papyrus"]
 else:
-  font_options = ["Helvetica-Bold", "Times-New-Roman-Bold", "Comic-Sans-MS-Bold", "Impact", "Papyrus", ]
+  font_options = ["Helvetica-Bold", "Times-New-Roman-Bold", "Comic-Sans-MS-Bold", "Impact"]
 
 class DeathGenerator:
   params : dict = {}
