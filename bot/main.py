@@ -10,11 +10,14 @@ import logging
 import re
 import datetime
 import subprocess
-import math
+import sys
 
 img_ext_regex = re.compile(r"\.(png|jpeg|jpg|bmp)")
 
-font_options = ["Comic-Sans-MS-Bold", "Impact", "Times-New-Roman-Bold", "Papyrus"]
+if sys.platform == "win32":
+  font_options = ["Comic-Sans-MS-Bold", "Impact", "Times-New-Roman-Bold", "Papyrus"]
+else:
+  font_options = ["Helvetica-Bold", ]
 
 class DeathGenerator:
   params : dict = {}
