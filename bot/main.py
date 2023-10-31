@@ -6,7 +6,6 @@ import asyncio
 import discord
 from pathlib import Path
 import random
-import logging
 import re
 import datetime
 import subprocess
@@ -256,7 +255,7 @@ class LusciousBot(discord.Client):
     self.generate_user_lists()
     
     i = 0
-    nextdeathmsg = 480
+    nextdeathmsg = 181
     nextuserlistsave = 10
     while not self.is_closed():
       
