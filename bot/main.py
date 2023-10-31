@@ -10,6 +10,7 @@ import re
 import datetime
 import subprocess
 import sys
+import logging
 
 img_ext_regex = re.compile(r"\.(png|jpeg|jpg|bmp)")
 
@@ -17,6 +18,10 @@ if sys.platform == "win32":
   font_options = ["Comic-Sans-MS-Bold", "Impact", "Times-New-Roman-Bold", "Papyrus"]
 else:
   font_options = ["Helvetica-Bold", "Times-New-Roman-Bold", "Comic-Sans-MS-Bold", "Impact"]
+  
+logger = logging.getLogger('discord')
+logger.setLevel(logging.INFO)
+logging.getLogger('discord.http').setLevel(logging.INFO)
 
 class DeathGenerator:
   params : dict = {}
@@ -32,7 +37,7 @@ class DeathGenerator:
     for key in self.params.keys():
       self.death_map[key] = len(self.params[key]["reason"]) * max(len(self.params[key]["modifier"]), 1)
       self.total_options += self.death_map[key]
-    print("Total death options: ", self.total_options)
+    logger.info("Total death options: ", self.total_options)
       
   def get_death(self, name, pronouns = "they/them", override_deathnum = -1):
     death_num = override_deathnum if override_deathnum >= 0 else random.randint(0, self.total_options - 1)
@@ -102,8 +107,9 @@ class LusciousBot(discord.Client):
   death_wait_min = (12 * 60) # 12 hours
   death_wait_max = (36 * 60) # 36 hours
   
-  def __init__(self, channels : typing.List[str], generator_config : str, image_dir : str, user_lists_path = "./users.json", *args, **kwargs):
+  def __init__(self, channels : typing.List[str], roles : typing.Dict[str, str], generator_config : str, image_dir : str, user_lists_path = "./users.json", *args, **kwargs):
     self.death_msg_channels = channels
+    self.death_roles = roles
     
     self.death_gen = DeathGenerator(generator_config)
     self.image_dir = image_dir
@@ -160,14 +166,18 @@ class LusciousBot(discord.Client):
         channel = None
         
     if channel == None:
-      print("Message not from server participating in death msgs.")
+      logger.info("Message not from server participating in death msgs.")
+      return
     
     channelid = str(channel.id)
     userid = str(message.author.id)
     if userid in self.user_lists[channelid]:
-      self.user_lists[channelid][userid] += 9 if self.user_lists[channelid][userid] == 1 else 5
+      if self.user_lists[channelid][userid] < 500:
+        self.user_lists[channelid][userid] = 500
+      else:
+        self.user_lists[channelid][userid] += 25
     else:
-      self.user_lists[channelid][userid] = 10
+      self.user_lists[channelid][userid] = 500
     
   async def on_message(self, message : discord.Message) -> None:
     if message.author.id == self.user.id:
@@ -177,7 +187,7 @@ class LusciousBot(discord.Client):
     
   async def on_ready(self):
     for guild in self.guilds:
-      print(guild.name)
+      logger.info(guild.name)
       
   def get_users_and_weights(self, channel_id : str) -> typing.Tuple[typing.List[str], typing.List[float]]:
     users = list(self.user_lists[channel_id].keys())
@@ -185,11 +195,14 @@ class LusciousBot(discord.Client):
     weights = []
     total_weight = 0
     for user in users:
-      user_weight = 1 if self.user_lists[channel_id][user] < 0 else self.user_lists[channel_id][user]
+      user_weight = 0 if self.user_lists[channel_id][user] < 0 else self.user_lists[channel_id][user]
       weights.append(user_weight)
       total_weight += user_weight
       
-    normalized_weights = [w / total_weight for w in weights]
+    if total_weight > 0:
+      normalized_weights = [w / total_weight for w in weights]
+    else:
+      normalized_weights = [1 / len(weights) for _ in weights]
     return (users, normalized_weights)
       
   async def send_death_msg(self):
@@ -206,7 +219,7 @@ class LusciousBot(discord.Client):
         else:
           break
         
-      self.user_lists[channel_id][user_id] = -49
+      self.user_lists[channel_id][user_id] = -999999999
       
       username = mentioned.name
       if mentioned.nick != None:
@@ -247,6 +260,11 @@ class LusciousBot(discord.Client):
         await msg.add_reaction("🇵")
         await msg.add_reaction("🕊️")
         
+        if channel_id in self.death_roles:
+          role : discord.Role = channel.guild.get_role(int(self.death_roles[channel_id]))
+          if role:
+            await mentioned.add_roles(role)
+        
     return random.randint(self.death_wait_min, self.death_wait_max)
     
   async def periodic_events(self):
@@ -255,20 +273,20 @@ class LusciousBot(discord.Client):
     self.generate_user_lists()
     
     i = 0
-    nextdeathmsg = 181
-    nextuserlistsave = 10
+    nextdeathmsg = 180
+    nextuserlistsave = 1
     while not self.is_closed():
       
       if i >= nextdeathmsg:
-        print("Sending death message.")
+        logger.info("Sending death message.")
         nextdeathmsg =  i + await self.send_death_msg()
-        print(f"Next death message in {nextdeathmsg - i} minutes.")
+        logger.info(f"Next death message in {nextdeathmsg - i} minutes.")
         
       if i >= nextuserlistsave:
-        print("Saving user msg list.")
+        logger.info("Saving user msg list.")
         self.save_user_lists()
-        nextuserlistsave = i + 2
-        print("User lists saved.")
+        nextuserlistsave = i + 1
+        logger.info("User lists saved.")
         
       await asyncio.sleep(60) # wait a minute
       i += 1
@@ -277,7 +295,7 @@ class LusciousBot(discord.Client):
         i -= 10000
         nextdeathmsg -= 10000
         
-        print("Reached 10,000 minutes of runtime. Reseting counter.")
+        logger.info("Reached 10,000 minutes of runtime. Reseting counter.")
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
@@ -292,6 +310,7 @@ if __name__ == "__main__":
     
   intents = discord.Intents.default()
   intents.members = True
-  bot = LusciousBot(cred_json['CHANNELS'], args.gencfg, args.imgdir, intents = intents)
+  intents.guilds = True
+  bot = LusciousBot(cred_json['CHANNELS'], cred_json['ROLES'], args.gencfg, args.imgdir, intents = intents)
   
   bot.run(cred_json['TOKEN'])
