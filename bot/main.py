@@ -172,7 +172,7 @@ class LusciousBot(discord.Client):
     channelid = str(channel.id)
     userid = str(message.author.id)
     if userid in self.user_lists[channelid]:
-      if self.user_lists[channelid][userid] < 500:
+      if 0 < self.user_lists[channelid][userid] < 500:
         self.user_lists[channelid][userid] = 500
       else:
         self.user_lists[channelid][userid] += 25
