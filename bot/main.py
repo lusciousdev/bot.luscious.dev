@@ -35,8 +35,8 @@ class DeathGenerator:
       self.total_options += self.death_map[key]
     print("Total death options: ", self.total_options)
       
-  def get_death(self, name, pronouns = "they/them"):
-    death_num = random.randint(0, self.total_options - 1)
+  def get_death(self, name, pronouns = "they/them", override_deathnum = -1):
+    death_num = override_deathnum if override_deathnum >= 0 else random.randint(0, self.total_options - 1)
     category = None
     
     for key in sorted(self.death_map.keys()):
@@ -92,19 +92,24 @@ class DeathGenerator:
 class LusciousBot(discord.Client):
   __token__ : str = ""
   
-  periodic_msg_channels : typing.List[str] = []
+  death_msg_channels : typing.List[str] = []
   death_gen : DeathGenerator = None
   image_dir : str = ""
   image_paths : typing.List[str] = []
   
-  death_wait_min = (12 * 60 * 60)
-  death_wait_max = (36 * 60 * 60)
+  user_lists_path : str = ""
+  user_lists : typing.Dict[str, typing.Dict[str, int]] = {}
   
-  def __init__(self, channels : typing.List[str], generator_config : str, image_dir : str, *args, **kwargs):
-    self.periodic_msg_channels = channels
+  death_wait_min = (12 * 60) # 12 hours
+  death_wait_max = (36 * 60) # 36 hours
+  
+  def __init__(self, channels : typing.List[str], generator_config : str, image_dir : str, user_lists_path = "./users.json", *args, **kwargs):
+    self.death_msg_channels = channels
     
     self.death_gen = DeathGenerator(generator_config)
     self.image_dir = image_dir
+    
+    self.user_lists_path = user_lists_path
     
     self.get_image_paths()
     
@@ -116,69 +121,164 @@ class LusciousBot(discord.Client):
     self.image_paths = sorted([os.path.abspath(f) for f in os.listdir('.') if (os.path.isfile(f) and img_ext_regex.search(f) != None)])
     os.chdir(cwd)
     
+  def add_channel_to_user_lists(self, channel_id : int):
+    channel = self.get_channel(channel_id)
+    channel_id_str = str(channel_id)
+    
+    if channel_id_str not in self.user_lists.keys():
+      self.user_lists[channel_id_str] = {}
+    
+    for member in channel.guild.members:
+      if str(member.id) not in self.user_lists[channel_id_str].keys():
+        self.user_lists[channel_id_str][str(member.id)] = 1
+        
+  def save_user_lists(self):
+    with open(self.user_lists_path, 'w') as userlistsfp:
+      json.dump(self.user_lists, userlistsfp, indent = 2)
+    
+  def generate_user_lists(self):
+    if os.path.exists(self.user_lists_path) and os.path.isfile(self.user_lists_path):
+      with open(self.user_lists_path, 'r') as userlistsfp:
+        self.user_lists = json.load(userlistsfp)
+    else:
+      self.user_lists = {}
+      
+    for channelid in self.death_msg_channels:
+      self.add_channel_to_user_lists(int(channelid))
+        
+    self.save_user_lists()
+    
   async def setup_hook(self) -> None:
-    self.bg_task = self.loop.create_task(self.periodic_message())
+    self.bg_task = self.loop.create_task(self.periodic_events())
+    
+  def check_message_in_death_server(self, message : discord.Message):
+    guild = message.guild
+    for channelid in self.death_msg_channels:
+      channel = self.get_channel(int(channelid))
+      if guild == channel.guild:
+        break
+      else:
+        channel = None
+        
+    if channel == None:
+      print("Message not from server participating in death msgs.")
+    
+    channelid = str(channel.id)
+    userid = str(message.author.id)
+    if userid in self.user_lists[channelid]:
+      self.user_lists[channelid][userid] += 9 if self.user_lists[channelid][userid] == 1 else 5
+    else:
+      self.user_lists[channelid][userid] = 10
+    
+  async def on_message(self, message : discord.Message) -> None:
+    if message.author.id == self.user.id:
+      return
+    
+    self.check_message_in_death_server(message)
     
   async def on_ready(self):
     for guild in self.guilds:
       print(guild.name)
+      
+  def get_users_and_weights(self, channel_id : str) -> typing.Tuple[typing.List[str], typing.List[float]]:
+    users = list(self.user_lists[channel_id].keys())
     
-  async def periodic_message(self):
+    weights = []
+    total_weight = 0
+    for user in users:
+      user_weight = 1 if self.user_lists[channel_id][user] < 0 else self.user_lists[channel_id][user]
+      weights.append(user_weight)
+      total_weight += user_weight
+      
+    normalized_weights = [w / total_weight for w in weights]
+    return (users, normalized_weights)
+      
+  async def send_death_msg(self):
+    for channel_id in self.death_msg_channels:
+      channel = self.get_channel(int(channel_id))
+      
+      users, weights = self.get_users_and_weights(channel_id)
+      
+      while True:
+        user_id : str = random.choices(users, weights)[0]
+        mentioned : discord.Member = next((member for member in channel.members if member.id == int(user_id)), None)
+        if mentioned not in channel.members:
+          continue
+        else:
+          break
+        
+      self.user_lists[channel_id][user_id] = -49
+      
+      username = mentioned.name
+      if mentioned.nick != None:
+        username = mentioned.nick
+      elif mentioned.global_name != None:
+        username = mentioned.global_name
+        
+      death = self.death_gen.get_death(mentioned.mention)
+        
+      imgpath = random.choice(self.image_paths)
+      
+      dtnow = datetime.datetime.now()
+      tmp_path = f"./tmp_{dtnow.strftime('%Y%m%d%H%M%S')}.png"
+      label_path_1 = f"./label_{dtnow.strftime('%Y%m%d%H%M%S')}-0.png"
+      label_path_2 = f"./label_{dtnow.strftime('%Y%m%d%H%M%S')}-1.png"
+      
+      min_age = 18
+      max_age = 250
+      ages = [random.randint(min_age, max_age) for i in range(5)]
+      age = min(ages)
+      current_year = int(dtnow.strftime("%Y"))
+      birth_year = current_year - age
+      message = f"R.I.P. {username}\n{birth_year} - {current_year}"
+      
+      subprocess.run(['magick', '-background', 'none', '-gravity', 'South', '-font', random.choice(font_options), '-size', '2048x640', '-fill', 'white', '-stroke', 'black', '-strokewidth', '20', f'Label:{message}', '-write', label_path_1, '+delete', '-stroke', 'none', f'Label:{message}', label_path_2])
+      subprocess.run(['magick', 'convert', imgpath, '-set', 'colorspace', 'Gray', '-separate', '-average', label_path_1, '-gravity', 'South', '-geometry', '512x160+0+10', '-composite', label_path_2, '-gravity', 'South', '-geometry', '512x160+0+10', '-composite', tmp_path])
+      
+      with open(tmp_path, 'rb') as imgfp:
+        imgfile = discord.File(imgfp)
+        msg : discord.Message = await channel.send(death, file = imgfile)
+        imgfp.close()
+        os.remove(tmp_path)
+        os.remove(label_path_1)
+        os.remove(label_path_2)
+        await msg.add_reaction("🪦")
+        await msg.add_reaction("🇷")
+        await msg.add_reaction("🇮")
+        await msg.add_reaction("🇵")
+        await msg.add_reaction("🕊️")
+        
+    return random.randint(self.death_wait_min, self.death_wait_max)
+    
+  async def periodic_events(self):
     await self.wait_until_ready()
     
-    channels = [self.get_channel(int(c)) for c in self.periodic_msg_channels]
+    self.generate_user_lists()
     
+    i = 0
+    nextdeathmsg = 480
+    nextuserlistsave = 10
     while not self.is_closed():
       
-      for channel in channels:
-        valid_ids = [113416440383610880, 176069643742478336, 209550411252629504, 338071463242498070, 155149108183695360, 1168040719672430662, 83010416610906112]
-        mods = list(filter(lambda x: x.id in valid_ids, channel.members))
+      if i >= nextdeathmsg:
+        print("Sending death message.")
+        nextdeathmsg =  i + await self.send_death_msg()
+        print(f"Next death message in {nextdeathmsg - i} minutes.")
         
-        if len(mods) > 0:
-          mentioned : discord.Member = random.choice(mods)
-        else:
-          mentioned : discord.Member = random.choice(channel.members)
+      if i >= nextuserlistsave:
+        print("Saving user msg list.")
+        self.save_user_lists()
+        nextuserlistsave = i + 2
+        print("User lists saved.")
         
-        username = mentioned.name
-        if mentioned.nick != None:
-          username = mentioned.nick
-        elif mentioned.global_name != None:
-          username = mentioned.global_name
-          
-        death = self.death_gen.get_death(mentioned.mention)
-          
-        imgpath = random.choice(self.image_paths)
+      await asyncio.sleep(60) # wait a minute
+      i += 1
+      
+      if i > 10000:
+        i -= 10000
+        nextdeathmsg -= 10000
         
-        dtnow = datetime.datetime.now()
-        tmp_path = f"./tmp_{dtnow.strftime('%Y%m%d%H%M%S')}.png"
-        label_path_1 = f"./label_{dtnow.strftime('%Y%m%d%H%M%S')}-0.png"
-        label_path_2 = f"./label_{dtnow.strftime('%Y%m%d%H%M%S')}-1.png"
-        
-        min_age = 18
-        max_age = 250
-        ages = [random.randint(min_age, max_age) for i in range(5)]
-        age = min(ages)
-        current_year = int(dtnow.strftime("%Y"))
-        birth_year = current_year - age
-        message = f"R.I.P. {username}\n{birth_year} - {current_year}"
-        
-        subprocess.run(['magick', '-background', 'none', '-gravity', 'South', '-font', random.choice(font_options), '-size', '2048x640', '-fill', 'white', '-stroke', 'black', '-strokewidth', '20', f'Label:{message}', '-write', label_path_1, '+delete', '-stroke', 'none', f'Label:{message}', label_path_2])
-        subprocess.run(['magick', 'convert', imgpath, label_path_1, '-gravity', 'South', '-geometry', '512x160+0+10', '-composite', label_path_2, '-gravity', 'South', '-geometry', '512x160+0+10', '-composite', tmp_path])
-        
-        with open(tmp_path, 'rb') as imgfp:
-          imgfile = discord.File(imgfp)
-          msg : discord.Message = await channel.send(death, file = imgfile)
-          imgfp.close()
-          os.remove(tmp_path)
-          os.remove(label_path_1)
-          os.remove(label_path_2)
-          await msg.add_reaction("🪦")
-          await msg.add_reaction("🇷")
-          await msg.add_reaction("🇮")
-          await msg.add_reaction("🇵")
-          await msg.add_reaction("🕊️")
-        
-      await asyncio.sleep(random.randint(self.death_wait_min, self.death_wait_max))
+        print("Reached 10,000 minutes of runtime. Reseting counter.")
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()

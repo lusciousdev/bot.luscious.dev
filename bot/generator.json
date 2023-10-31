@@ -2,7 +2,6 @@
   "injuries": {
     "reason": [
       "died of blunt force trauma to [[pos]] [[m]]",
-      "died of an infection in [[pos]] [[m]]",
       "died due to a botched amputation of [[pos]] [[m]]"
     ],
     "modifier": [
@@ -91,7 +90,8 @@
       "met an untimely end",
       "has died of ligma",
       "ded",
-      "died under mysterious circumstances"
+      "died under mysterious circumstances",
+      "overdosed on copium"
     ],
     "modifier": []
   }
