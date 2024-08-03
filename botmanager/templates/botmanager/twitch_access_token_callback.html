@@ -1,0 +1,5 @@
+<input id="access_token" type="text" size="64" disabled>
+
+<script>
+  document.getElementById("access_token").value = window.location.hash.substring(1).match(/access_token=([A-Za-z0-9_\-]+)&/)[1];
+</script>

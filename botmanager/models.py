@@ -1,78 +1,125 @@
 from django.db import models
 from django import forms
-import django.contrib.admin as admin
-from django.dispatch import receiver
 
 import datetime
 
 # Create your models here.
 
 class ChatBot(models.Model):
-  name = models.CharField(max_length = 256, blank = False, null = False, unique = True)
+  name = models.CharField(max_length = 255, blank = False, null = False, unique = True)
   
-  discord_bot = models.BooleanField(default = True)
-  discord_token = models.CharField(max_length = 256, blank = True, null = True)
-  discord_restrict_channels = models.BooleanField(default = False)
+  def __str__(self):
+    return f"{self.name}"
   
-  twitch_bot = models.BooleanField(default = True)
-  twitch_client_id = models.CharField(max_length = 256, blank = True, null = True)
-  twitch_client_secret = models.CharField(max_length = 256, blank = True, null = True)
-  twitch_access_token = models.CharField(max_length = 256, blank = True, null = True)
+class DiscordConfig(models.Model):
+  bot = models.OneToOneField(to = ChatBot, on_delete = models.CASCADE, primary_key = True)
+  
+  active = models.BooleanField(default = True)
+  
+  access_token = models.CharField(max_length = 256, blank = True, null = True)
+  
+  def __str__(self):
+    return f"{self.bot.name}'s Discord config"
+  
+class TwitchConfig(models.Model):
+  bot = models.OneToOneField(to = ChatBot, on_delete = models.CASCADE, primary_key = True)
+  
+  active = models.BooleanField(default = True)
+  
+  client_id = models.CharField(max_length = 256, blank = True, null = True)
+  client_secret = models.CharField(max_length = 256, blank = True, null = True)
+  access_token = models.CharField(max_length = 256, blank = True, null = True)
+  
+  def __str__(self):
+    return f"{self.bot.name}'s Twitch config"
   
 class DiscordChannel(models.Model):
-  bot = models.ForeignKey(ChatBot, on_delete = models.CASCADE)
+  config = models.ForeignKey(DiscordConfig, on_delete = models.CASCADE)
   
   channel_id = models.CharField(max_length = 256)
   
-class DiscordChannelInline(admin.TabularInline):
-  model = DiscordChannel
-  extra = 1
-  
 class TwitchChat(models.Model):
-  bot = models.ForeignKey(ChatBot, on_delete = models.CASCADE)
+  config = models.ForeignKey(TwitchConfig, on_delete = models.CASCADE)
   
   channel_name = models.CharField(max_length = 256)
   channel_id = models.CharField(max_length = 256)
   
-class TwitchChatInline(admin.TabularInline):
-  model = TwitchChat
-  extra = 1
-
-class BotCommand(models.Model):
-  bot = models.ForeignKey(ChatBot, on_delete = models.CASCADE)
-  
-  command = models.CharField(max_length = 256, blank = False, null = False)
+class Command_A(models.Model):
+  command = models.CharField(max_length = 255, blank = False, null = False, unique = True)
   output = models.CharField(max_length = 400, blank = True)
   
-  per_user_cooldown = models.BooleanField(default = False)
+  
+  as_reply = models.BooleanField(default = False)
   cooldown = models.IntegerField(verbose_name = "Cooldown in seconds", default = 60)
   
+  class Meta:
+    abstract = True
+    
+class TwitchCommand_A(Command_A):
+  config = models.ForeignKey(TwitchConfig, on_delete = models.CASCADE)
   
-class BotCommandInline(admin.TabularInline):
-  model = BotCommand
-  extra = 1
+  cooldown_while_offline = models.IntegerField(verbose_name = "Cooldown in seconds (offline)", default = 60)
   
+  class Meta:
+    abstract = True
+    
+class DiscordCommand_A(Command_A):
+  config = models.ForeignKey(DiscordConfig, on_delete = models.CASCADE)
+  
+  restrict_channels = models.BooleanField(default = False)
+  
+  class Meta:
+    abstract = True
+
+class TwitchBasicCommand(TwitchCommand_A):
+  pass
+
+class TwitchCustomCommand(TwitchCommand_A):
+  pass
+
+class DiscordBasicCommand(DiscordCommand_A):
+  pass
+
+class DiscordCustomCommand(DiscordCommand_A):
+  pass
+
+class PeriodicMsg_A(models.Model):
+  name = models.CharField(max_length = 255, blank = False, null = False, unique = True)
+  output = models.CharField(max_length = 400, blank = True)
+  period = models.IntegerField(verbose_name = "Period in seconds", default = 60)
+  
+  class Meta:
+    abstract = True
+    
+class TwitchPeriodicMsg_A(PeriodicMsg_A):
+  config = models.ForeignKey(TwitchConfig, on_delete = models.CASCADE)
+  
+  only_while_live = models.BooleanField(default = True)
+  
+  class Meta:
+    abstract = True
+    
+class DiscordPeriodicMsg_A(PeriodicMsg_A):
+  config = models.ForeignKey(DiscordConfig, on_delete = models.CASCADE)
+  
+  class Meta:
+    abstract = True
+
+class TwitchPeriodicMsg(TwitchPeriodicMsg_A):
+  pass
+
+class TwitchCustomPeriodicMsg(TwitchPeriodicMsg_A):
+  pass
+
+class DiscordPeriodicMsg(DiscordPeriodicMsg_A):
+  pass
+
+class DiscordCustomPeriodicMsg(DiscordPeriodicMsg_A):
+  pass
+
 class ChatBotForm(forms.ModelForm):
-  template = "botmanager/chat_bot_form.html"
-  
-  name = forms.CharField(max_length = 256)
-  
-  discord_bot = forms.BooleanField()
-  discord_token = forms.CharField(max_length = 256)
-  discord_restrict_channels = forms.BooleanField(label = "Restrict to specific channels?")
-  
-  twitch_bot = forms.BooleanField()
-  twitch_client_id = forms.CharField(max_length = 256)
-  twitch_client_secret = forms.CharField(max_length = 256)
-  twitch_access_token = forms.CharField(max_length = 256)
+  name = forms.CharField(max_length = 256, required = True)
   
   class Meta:
     model = ChatBot
     exclude = []
-  
-class ChatBotAdmin(admin.ModelAdmin):
-  list_display = ('name', )
-  search_fields = [ 'name' ]
-  form = ChatBotForm
-  inlines = ( DiscordChannelInline, TwitchChatInline, BotCommandInline, )
-  ordering = ( 'name', )
