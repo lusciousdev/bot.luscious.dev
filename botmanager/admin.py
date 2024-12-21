@@ -8,6 +8,10 @@ from .models import *
 from .views import *
 
 # Register your models here.
+
+class ExtraCredentialInline(admin.TabularInline):
+  model = ExtraCredential
+  extra = 1
   
 class TwitchChatInline(admin.TabularInline):
   model = TwitchChat
@@ -71,7 +75,7 @@ class DiscordConfigInline(admin.TabularInline):
 class ChatBotAdmin(admin.ModelAdmin):
   search_fields = [ 'name' ]
   form = ChatBotForm
-  inlines = ( TwitchConfigInline, DiscordConfigInline, )
+  inlines = ( TwitchConfigInline, DiscordConfigInline, ExtraCredentialInline, )
   ordering = ( 'name', )
   
   def get_urls(self):

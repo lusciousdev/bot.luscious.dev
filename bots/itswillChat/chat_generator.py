@@ -14,7 +14,7 @@ class ChatGenerator:
   
   bad_ids = [[299, 15249], [44873, 4908], [277, 9460, 313], [479, 522], [42964], [34445], [77, 1573]]
   
-  def __init__(self, tokenizer_model = "microsoft/DialoGPT-medium", general_model = os.path.join(os.path.dirname(__file__), 'models/itswillchat.2024.01.002'), response_model = os.path.join(os.path.dirname(__file__), 'models/itswillrespond.2024.01.002'), use_cuda = True):
+  def __init__(self, tokenizer_model = "microsoft/DialoGPT-medium", general_model = os.path.join(os.path.dirname(__file__), 'models/itswillchat.2024.09.001'), response_model = os.path.join(os.path.dirname(__file__), 'models/itswillrespond.2024.09.002'), use_cuda = True):
     self.tokenizer : PreTrainedTokenizer = AutoTokenizer.from_pretrained(tokenizer_model, bad_word_ids = [])
     self.gen_model : gpt2.GPT2LMHeadModel = AutoModelForCausalLM.from_pretrained(general_model)
     self.res_model : gpt2.GPT2LMHeadModel = AutoModelForCausalLM.from_pretrained(response_model)

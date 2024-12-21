@@ -11,6 +11,9 @@ class BotCommand:
   command : str = ""
   output : str = ""
   as_reply : bool = False
+  match_anywhere : bool = False
+  is_regex : bool = False
+  command_regex : re.Pattern = None
   cooldown : int = 60
   cooldown_while_offline : int = 60
   last_sent = datetime.datetime(1970, 1, 1, 0, 0, 0, 1)
@@ -18,13 +21,21 @@ class BotCommand:
   
   def __init__(self, command : str, 
                      output : str, 
-                     as_reply : bool = False, 
+                     as_reply : bool = False,
+                     match_anywhere : bool = False,
+                     is_regex : bool = False, 
                      cooldown : int = 60, 
                      cooldown_while_offline : int = None, 
                      restrict_to_channels : bool = False):
     self.command = command
     self.output = output
     self.as_reply = as_reply
+    self.match_anywhere = match_anywhere
+    self.is_regex = is_regex
+    
+    if self.is_regex:
+      self.command_regex = re.compile(self.command, re.IGNORECASE)
+    
     self.cooldown = cooldown
     self.cooldown_while_offline = cooldown_while_offline
     self.restrict_to_channels = restrict_to_channels
@@ -37,7 +48,16 @@ class BotCommand:
       return time_since < self.cooldown_while_offline
   
   def match(self, message : str) -> bool:
-    return message.lower().startswith(self.command.lower())
+    if not self.is_regex:
+      if not self.match_anywhere:
+        return message.lower().startswith(self.command.lower())
+      else:
+        return self.command.lower() in message.lower()
+    else:
+      if not self.match_anywhere:
+        return (self.command_regex.match(message.lower()) != None)
+      else:
+        return (self.command_regex.search(message.lower()) != None)
   
   def generate_output(self, message : str, user_id : str = None) -> str:
     message_parts = message.split(" ")
@@ -66,7 +86,7 @@ class BotCommand:
       if match_obj.group() is not None:
         url = match_obj.group(1)
         try:
-          resp = requests.get(url, timeout = 30)
+          resp = requests.get(url, timeout = 90)
           
           if resp.status_code >= 200 and resp.status_code < 300:
             resp.encoding = 'UTF-8'
@@ -79,7 +99,10 @@ class BotCommand:
           return "HTTP Error."
         except TimeoutError:
           return "Request timed out."
-        except:
+        except requests.ReadTimeout:
+          return "Request timed out."
+        except Exception as e:
+          print(e)
           return "Unknown error."
       
     output = re.sub(URLFETCH_REGEX, replace_with_resp, output)

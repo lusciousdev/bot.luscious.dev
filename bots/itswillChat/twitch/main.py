@@ -32,8 +32,13 @@ class itswillChatTwitchBot(TwitchBot):
     
     self.chat_generator = ChatGenerator()
     
+    try:
+      bot_model = django_models.ChatBot.objects.get(name = self.bot_name)
+    except django_models.ChatBot.DoesNotExist:
+      raise(f"Bot with name \"{self.bot_name}\" does not exist.")
+    
     channel : django_models.TwitchChat
-    for channel in self.bot_model.twitchconfig.twitchchat_set.all():
+    for channel in bot_model.twitchconfig.twitchchat_set.all():
       self.channel_history[channel.channel_name.lower()] = []
     
   async def event_message(self, message : twitchio.Message):

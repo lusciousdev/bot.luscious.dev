@@ -84,7 +84,7 @@ class TwitchBot(twitchio_commands.Bot):
     command : django_models.TwitchBasicCommand
     for command in twitchconfig.twitchbasiccommand_set.all():
       existing_commands.append(command.command)
-      newbc = BotCommand(command.command, command.output, command.as_reply, command.cooldown, command.cooldown_while_offline)
+      newbc = BotCommand(command.command, command.output, command.as_reply, command.match_anywhere, command.regex_command, command.cooldown, command.cooldown_while_offline)
       
       command_exists = False
       bc : BotCommand
@@ -111,7 +111,7 @@ class TwitchBot(twitchio_commands.Bot):
     custom_command : django_models.TwitchCustomCommand
     for custom_command in twitchconfig.twitchcustomcommand_set.all():
       existing_custom_commands.append(custom_command.command)
-      newbc = BotCommand(custom_command.command, custom_command.output, custom_command.as_reply, custom_command.cooldown, custom_command.cooldown_while_offline)
+      newbc = BotCommand(custom_command.command, custom_command.output, custom_command.as_reply, custom_command.match_anywhere, custom_command.regex_command, custom_command.cooldown, custom_command.cooldown_while_offline)
       
       command_exists = False
       bc : BotCommand
@@ -140,7 +140,7 @@ class TwitchBot(twitchio_commands.Bot):
       name = periodic_message.name
       existing_periodics.append(name)
       
-      cmd = BotCommand(periodic_message.name, periodic_message.output, False, periodic_message.period)
+      cmd = BotCommand(periodic_message.name, periodic_message.output, False, False, False, periodic_message.period)
       
       if periodic_message.name in self.periodic_messages:
         if self.periodic_messages[name]['cmd'] != cmd:
@@ -173,7 +173,7 @@ class TwitchBot(twitchio_commands.Bot):
     for custom_periodic_message in twitchconfig.twitchcustomperiodicmsg_set.all():
       name = custom_periodic_message.name
       existing_custom_periodics.append(name)
-      cmd = BotCommand(custom_periodic_message.name, custom_periodic_message.output, False, custom_periodic_message.period)
+      cmd = BotCommand(custom_periodic_message.name, custom_periodic_message.output, False, False, False, custom_periodic_message.period)
         
       if custom_periodic_message.name in self.custom_periodic_messages:
         if self.custom_periodic_messages[name]['cmd'] != cmd:

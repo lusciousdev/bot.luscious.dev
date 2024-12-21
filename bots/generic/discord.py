@@ -90,7 +90,7 @@ class DiscordBot(discord.Client):
     command : django_models.DiscordBasicCommand
     for command in discordconfig.discordbasiccommand_set.all():
       existing_commands.append(command.command)
-      newbc = BotCommand(command.command, command.output, command.as_reply, command.cooldown, None, command.restrict_channels)
+      newbc = BotCommand(command.command, command.output, command.as_reply, command.match_anywhere, command.regex_command, command.cooldown, None, command.restrict_channels)
       
       command_exists = False
       bc : BotCommand
@@ -116,22 +116,27 @@ class DiscordBot(discord.Client):
     custom_command : django_models.DiscordCustomCommand
     for custom_command in discordconfig.discordcustomcommand_set.all():
       existing_custom_commands.append(custom_command.command)
-      newbc = BotCommand(custom_command.command, custom_command.output, custom_command.as_reply, custom_command.cooldown, None, custom_command.restrict_channels)
+      newbc = BotCommand(custom_command.command, custom_command.output, custom_command.as_reply, custom_command.match_anywhere, custom_command.regex_command, custom_command.cooldown, None, custom_command.restrict_channels)
       
       command_exists = False
       bc : BotCommand
       for bc in self.custom_commands:
-        if bc.command == command.command:
+        if bc.command == custom_command.command:
           if newbc != bc:
             print(f"Updating command: {bc.command}")
-          bc.output = command.output
-          bc.as_reply = command.as_reply
-          bc.cooldown = command.cooldown
+          bc.output = custom_command.output
+          bc.as_reply = custom_command.as_reply
+          bc.cooldown = custom_command.cooldown
           command_exists = True
       
       if not command_exists:
         print(f"New custom command: {custom_command.command}")
         self.custom_commands.append(newbc)
+      
+    for i in reversed(range(len(self.custom_commands))):
+      if self.custom_commands[i].command not in existing_custom_commands:
+        print(f"Command deleted: {self.custom_commands[i].command}")
+        del self.custom_commands[i]
     
     existing_periodics = []
     periodic_message : django_models.DiscordPeriodicMsg
@@ -139,7 +144,7 @@ class DiscordBot(discord.Client):
       name = periodic_message.name
       existing_periodics.append(name)
       
-      cmd = BotCommand(periodic_message.name, periodic_message.output, False, periodic_message.period)
+      cmd = BotCommand(periodic_message.name, periodic_message.output, False, False, False, periodic_message.period)
       
       if periodic_message.name in self.periodic_messages:
         if self.periodic_messages[name]['cmd'] != cmd:
@@ -171,7 +176,7 @@ class DiscordBot(discord.Client):
       name = custom_periodic_message.name
       existing_custom_periodics.append(name)
       
-      cmd = BotCommand(custom_periodic_message.name, custom_periodic_message.output, False, custom_periodic_message.period)
+      cmd = BotCommand(custom_periodic_message.name, custom_periodic_message.output, False, False, False, custom_periodic_message.period)
       
       if custom_periodic_message.name in self.custom_periodic_messages:
         if self.custom_periodic_messages[name]['cmd'] != cmd:
@@ -238,9 +243,11 @@ class DiscordBot(discord.Client):
         
         if not command.is_on_cooldown():
           if command.as_reply:
-            await message.reply(command.generate_output(message.content))
+            async with message.channel.typing():
+              await message.reply(command.generate_output(message.content))
           else:
-            await message.channel.send(command.generate_output(message.content))
+            async with message.channel.typing():
+              await message.channel.send(command.generate_output(message.content))
           command.sent()
         elif self.verbose:
           print(f"Command {command.command} skipped due to cooldown.")

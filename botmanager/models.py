@@ -33,6 +33,12 @@ class TwitchConfig(models.Model):
   def __str__(self):
     return f"{self.bot.name}'s Twitch config"
   
+class ExtraCredential(models.Model):
+  config = models.ForeignKey(ChatBot, on_delete = models.CASCADE)
+  
+  credential_name = models.CharField(max_length = 255)
+  credential = models.CharField(max_length = 511)
+  
 class DiscordChannel(models.Model):
   config = models.ForeignKey(DiscordConfig, on_delete = models.CASCADE)
   
@@ -50,6 +56,8 @@ class Command_A(models.Model):
   
   
   as_reply = models.BooleanField(default = False)
+  match_anywhere = models.BooleanField(default = False)
+  regex_command = models.BooleanField(default = False)
   cooldown = models.IntegerField(verbose_name = "Cooldown in seconds", default = 60)
   
   class Meta:
