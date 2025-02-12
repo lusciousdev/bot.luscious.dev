@@ -4,6 +4,7 @@ import re
 import typing
 import datetime as dt
 import discord
+from discord import app_commands
 import django
 from twitchio.ext import commands, routines
 from luscioustwitch import TwitchAPI

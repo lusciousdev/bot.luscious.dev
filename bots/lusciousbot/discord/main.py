@@ -1,6 +1,7 @@
 import os
 import re
 import discord
+from discord import app_commands
 import sys
 import typing
 import django
@@ -263,5 +264,51 @@ if __name__ == "__main__":
   intents.message_content = True
   
   bot = LusciousDiscordBot(bot_name = 'bot.luscious.dev', intents = intents)
+  tree = app_commands.CommandTree(bot)
+  
+  test_server = discord.Object(id = 736722186274078900)
+  itswill_server = discord.Object(id = 511239539889799178)
+  
+  @tree.context_menu(guilds = [test_server, itswill_server])
+  async def talker(interaction : discord.Interaction, message: discord.Message):
+    for i in "🇹🇦🇱🇰🇪🇷":
+      await message.add_reaction(i)
+    await interaction.response.send_message("Done.", ephemeral = True, delete_after = 10)
+    
+  @tree.command(description = "React to a message with an emote.", guilds = [test_server, itswill_server])
+  async def reactwith(interaction : discord.Interaction, emote_name : str, message_id : typing.Optional[str] = None):
+    emoji = discord.utils.get(interaction.client.emojis, name = emote_name)
+    
+    print(emoji)
+    
+    if emoji:
+      if message_id is not None:
+        try:
+          refmsg = await interaction.channel.fetch_message(message_id)
+        except discord.errors.NotFound:
+          await interaction.response.send_message("That message ID does not exist.", ephemeral = True, delete_after = 15)
+      else:
+        print(interaction.channel.id, interaction.channel.last_message_id)
+        messages = [msg async for msg in interaction.channel.history(limit = 1)]
+        
+        if messages:
+          refmsg = messages[0]
+        else:
+          await interaction.response.send_message("No message history.", ephemeral = True, delete_after = 15)
+          return
+      try:
+        await refmsg.add_reaction(emoji)
+        await interaction.response.send_message("Done.", ephemeral = True, delete_after = 3)
+      except Exception as e:
+        print(e)
+        await interaction.response.send_message("Encountered error while reacting with that emoji.", ephemeral = True, delete_after = 15)
+    else:
+      await interaction.response.send_message("Could not find an emoji with that name.", ephemeral = True, delete_after = 15)
+      
+  @bot.event
+  async def on_ready():
+    await tree.sync(guild = test_server)
+    await tree.sync(guild = itswill_server)
+    print("Ready!")
   
   bot.run(bot.__token__)

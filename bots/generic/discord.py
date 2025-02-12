@@ -3,6 +3,7 @@ import asyncio
 import discord
 from discord.ext import tasks
 from discord.utils import MISSING
+from discord import app_commands
 import sys
 import logging
 import typing
