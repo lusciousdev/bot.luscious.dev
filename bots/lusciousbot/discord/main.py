@@ -271,6 +271,9 @@ if __name__ == "__main__":
   
   @tree.context_menu(guilds = [test_server, itswill_server])
   async def talker(interaction : discord.Interaction, message: discord.Message):
+    if interaction.user.id != 113416440383610880 and (message.channel.id not in [513816134085246996, 1167329260189528146] or message.content == ""):
+      await interaction.response.send_message("Invalid request, dweeb.", ephemeral = True, delete_after = 10)
+      return
     for i in "🇹🇦🇱🇰🇪🇷":
       await message.add_reaction(i)
     await interaction.response.send_message("Done.", ephemeral = True, delete_after = 10)
