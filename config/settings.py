@@ -43,6 +43,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.twitch',
+
     'botmanager',
 ]
 
@@ -54,6 +60,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -61,7 +69,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [ BASE_DIR / 'templates' ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -74,8 +82,55 @@ TEMPLATES = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
 WSGI_APPLICATION = 'config.wsgi.application'
 
+SOCIALACCOUNT_STORE_TOKENS = True
+SOCIALACCOUNT_PROVIDERS = {
+    "twitch": {
+        "SCOPE": [
+            "channel:bot",
+            "channel:read:polls",
+            "channel:manage:polls",
+            "channel:read:redemptions",
+            "channel:manage:redemptions",
+            "channel:read:predictions",
+            "channel:manage:predictions",
+        ],
+        "APP": {
+            "client_id": TWITCH_API_CLIENT_ID,
+            "secret": TWITCH_API_CLIENT_SECRET,
+        },
+        "AUTH_PARAMS": {
+            "access_type": "offline"
+        }
+    },
+    "twitch_itswill_chat": {
+        "SCOPE": [
+            "user:read:chat",
+            "user:write:chat",
+            "user:bot",
+        ],
+        "AUTH_PARAMS": {
+            "access_type": "offline",
+        }
+    },
+    "twitch_luscious_bot": {
+        "SCOPE": [
+            "user:read:chat",
+            "user:write:chat",
+            "user:bot",
+        ],
+        "AUTH_PARAMS": {
+            "access_type": "offline",
+        }
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -151,6 +206,11 @@ LOGGING = {
     },
     "loggers": {
         "django": {
+            "handlers": ["file"],
+            "level": "ERROR",
+            "propagate": True,
+        },
+        "allauth": {
             "handlers": ["file"],
             "level": "DEBUG",
             "propagate": True,
